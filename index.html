@@ -1,0 +1,1939 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trivial Contable FP — Jugable</title>
+  <style>
+    :root{
+      --bg0:#070A14;
+      --bg1:#0B1026;
+      --card:#0E1633;
+      --card2:#111B3F;
+      --text:#EAF0FF;
+      --muted:#A9B4D6;
+      --stroke:rgba(255,255,255,.12);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --shadow2: 0 10px 30px rgba(0,0,0,.35);
+
+      /* Trivial-ish colors */
+      --c-compras:#2D7CFF;     /* azul */
+      --c-ventas:#FF3B3B;      /* rojo */
+      --c-servicios:#29D66B;   /* verde */
+      --c-marketing:#FFD23D;   /* amarillo */
+      --c-devol:#FF4FD8;       /* rosa */
+      --c-tes:#8B5CFF;         /* morado */
+      --c-balance:#27E6E6;     /* cian */
+
+      /* Superficies más sólidas (menos transparencia) */
+      --surface-panel:#121c3e;
+      --surface-panel-head:#0d1531;
+      --surface-modal:#16244d;
+      --surface-modal-head:#101a3a;
+      --surface-card:#172550;
+      --surface-soft:#131e42;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 0%, rgba(45,124,255,.25), transparent 60%),
+        radial-gradient(900px 600px at 85% 30%, rgba(255,79,216,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 110%, rgba(39,230,230,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    .app{
+      max-width:1200px;
+      margin:0 auto;
+      padding:22px 16px 34px;
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:16px;
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      min-width:260px;
+    }
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background:
+        conic-gradient(from 220deg,
+          var(--c-compras), var(--c-ventas), var(--c-servicios),
+          var(--c-marketing), var(--c-devol), var(--c-tes), var(--c-balance));
+      box-shadow: 0 14px 30px rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.15);
+    }
+    .brand h1{
+      font-size:16px;
+      margin:0;
+      letter-spacing:.2px;
+      line-height:1.1;
+    }
+    .brand p{
+      margin:2px 0 0;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .topActions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .btn{
+      appearance:none;border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow: 0 10px 22px rgba(0,0,0,.25);
+      transition: transform .08s ease, background .2s ease, border-color .2s ease;
+      font-weight:650;
+      font-size:13px;
+    }
+    .btn:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.20); }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn.primary{
+      border-color: rgba(45,124,255,.45);
+      background: linear-gradient(180deg, rgba(45,124,255,.38), rgba(45,124,255,.18));
+    }
+    .btn.danger{
+      border-color: rgba(255,59,59,.45);
+      background: linear-gradient(180deg, rgba(255,59,59,.34), rgba(255,59,59,.14));
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background: linear-gradient(180deg, var(--surface-panel), #0f1939);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panelHead{
+      padding:14px 14px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+      background: var(--surface-panel-head);
+    }
+    .panelHead h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.2px;
+    }
+    .panelBody{ padding:14px; }
+
+    /* Board */
+    .boardWrap{
+      padding:14px;
+    }
+
+    .board{
+      width: min(620px, 100%);
+      aspect-ratio: 1 / 1;
+      margin:0 auto;
+      position:relative;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.10), transparent 55%),
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.06), transparent 72%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.10));
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .ring{
+      position:absolute; inset: 10%;
+      border-radius: 999px;
+      border:1px dashed rgba(255,255,255,.12);
+    }
+    .ring2{
+      position:absolute; inset: 22%;
+      border-radius: 999px;
+      border:1px dashed rgba(255,255,255,.10);
+    }
+
+    .center{
+      position:absolute; inset: 35%;
+      border-radius: 24px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.10));
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:10px;
+      text-align:center;
+      padding:12px;
+    }
+    .center .title{
+      font-weight:800; letter-spacing:.3px;
+      font-size:14px;
+    }
+    .center .sub{
+      color:var(--muted);
+      font-size:12px; line-height:1.3;
+    }
+
+    .cell{
+      position:absolute;
+      width: 56px; height: 56px;
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      display:flex;align-items:center;justify-content:center;
+      box-shadow: var(--shadow2);
+      user-select:none;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      overflow:hidden;
+    }
+    .cell::before{
+      content:"";
+      position:absolute; inset:0;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.18), transparent 55%);
+      pointer-events:none;
+    }
+    .cell .dot{
+      width:10px;height:10px;border-radius:999px;
+      background: rgba(255,255,255,.55);
+      box-shadow: 0 0 0 6px rgba(255,255,255,.08);
+    }
+    .cell.wedge{
+      width:62px;height:62px;border-radius:22px;
+      border-color: rgba(255,255,255,.18);
+    }
+    .cell.wedge .dot{
+      width:12px;height:12px;
+      box-shadow: 0 0 0 8px rgba(255,255,255,.08);
+    }
+    .cell.active{
+      transform: scale(1.06);
+      border-color: rgba(255,255,255,.32);
+      box-shadow: 0 18px 46px rgba(0,0,0,.45);
+    }
+
+    .token{
+      position:absolute;
+      width:22px;height:22px;border-radius:999px;
+      border:2px solid rgba(255,255,255,.9);
+      box-shadow: 0 10px 18px rgba(0,0,0,.35);
+      transform: translate(-50%,-50%);
+      transition: left .18s ease-in-out, top .18s ease-in-out;
+      z-index:10;
+    }
+    .token::after{
+      content:"";
+      position:absolute; inset:-6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.22);
+    }
+
+    /* Dice */
+    .diceRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .dice{
+      width:54px;height:54px;border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      display:grid; place-items:center;
+      font-size:20px; font-weight:900;
+      box-shadow: var(--shadow2);
+    }
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:7px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:12px;
+      font-weight:650;
+      white-space:nowrap;
+    }
+    .pill b{ color: var(--text); }
+
+    /* Players */
+    .players{
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .playerCard{
+      padding:10px 10px 10px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: var(--surface-soft);
+      display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
+    }
+    .playerLeft{ display:flex; gap:10px; align-items:center; }
+    .chip{
+      width:14px;height:14px;border-radius:999px;
+      box-shadow: 0 0 0 6px rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.35);
+      margin-top:2px;
+    }
+    .playerName{ font-weight:850; font-size:13px; }
+    .playerMeta{ color:var(--muted); font-size:12px; margin-top:1px;}
+    .wedges{
+      display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;
+    }
+    .w{
+      width:12px;height:12px;border-radius:4px;
+      border:1px solid rgba(255,255,255,.20);
+      opacity:.35;
+    }
+    .w.on{ opacity:1; box-shadow: 0 0 0 6px rgba(255,255,255,.05); }
+
+    .legend{
+      display:flex; flex-wrap:wrap; gap:8px;
+    }
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+    .tag .sw{ width:10px; height:10px; border-radius:999px; }
+
+    /* Modal */
+    .modalBack{
+      position:fixed; inset:0;
+      background: rgba(2,5,15,.82);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:16px;
+      z-index:50;
+    }
+    .modalBack.show{ display:flex; }
+    .modal{
+      width: min(860px, 100%);
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.18);
+      background: linear-gradient(180deg, var(--surface-modal), #111d42);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modalHead{
+      padding:14px 14px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      background: var(--surface-modal-head);
+    }
+    .modalHead .k{
+      display:flex; align-items:center; gap:10px;
+      font-weight:900; letter-spacing:.2px;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      font-size:12px;
+      font-weight:850;
+    }
+    .badge .sw{ width:10px;height:10px;border-radius:999px; }
+
+    .modalBody{ padding:14px; display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+    @media (max-width: 900px){
+      .modalBody{ grid-template-columns: 1fr; }
+    }
+
+    .qCard{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: var(--surface-card);
+      padding:12px;
+      min-height: 240px;
+    }
+    .qTitle{
+      font-size:14px; font-weight:900; margin:0 0 8px;
+      line-height:1.25;
+    }
+    .qText{
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.35;
+      margin:0 0 10px;
+      white-space:pre-wrap;
+    }
+    .optGrid{
+      display:grid; gap:8px;
+      margin-top:8px;
+    }
+    .opt{
+      text-align:left;
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.16);
+      background: #1a2a59;
+      color:var(--text);
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      transition: transform .08s ease, background .2s ease, border-color .2s ease;
+    }
+    .opt:hover{ background: #22366f; border-color: rgba(255,255,255,.26); }
+    .opt:active{ transform: translateY(1px); }
+    .opt.good{ border-color: rgba(41,214,107,.55); background: rgba(41,214,107,.12); }
+    .opt.bad{ border-color: rgba(255,59,59,.55); background: rgba(255,59,59,.10); }
+
+    .explain{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: var(--surface-card);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height: 240px;
+    }
+    .kv{ display:flex; gap:10px; flex-wrap:wrap; }
+    .kv .pill{ background: rgba(255,255,255,.04); }
+
+    .invoice{
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, #223664, #172750);
+      padding:12px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .invTop{ display:flex; justify-content:space-between; gap:10px; }
+    .invTop b{ color:var(--text); }
+    .invGrid{
+      display:grid;
+      grid-template-columns: 1.2fr .4fr .4fr .4fr;
+      gap:8px;
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px dashed rgba(255,255,255,.14);
+      align-items:center;
+      font-weight:700;
+    }
+    .invGrid .h{ color:var(--text); font-weight:900; }
+    .invTotal{
+      display:flex; justify-content:flex-end; gap:12px; margin-top:10px;
+      padding-top:10px; border-top:1px dashed rgba(255,255,255,.14);
+      color:var(--text); font-weight:900;
+    }
+
+    /* Toast / confetti-ish */
+    .toast{
+      position:fixed; left:50%; bottom:16px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.14);
+      padding:10px 12px;
+      border-radius:14px;
+      box-shadow: var(--shadow2);
+      color:var(--text);
+      font-weight:850;
+      font-size:13px;
+      display:none;
+      z-index:60;
+      backdrop-filter: blur(8px);
+    }
+    .toast.show{ display:block; animation: pop .22s ease; }
+    @keyframes pop{
+      from{ transform: translateX(-50%) translateY(8px) scale(.98); opacity:.0; }
+      to{ transform: translateX(-50%) translateY(0) scale(1); opacity:1; }
+    }
+
+    .confetti{
+      position:fixed; inset:0; pointer-events:none; display:none; z-index:70;
+      overflow:hidden;
+    }
+    .confetti.show{ display:block; }
+    .confetti i{
+      position:absolute;
+      width:10px;height:16px;border-radius:3px;
+      opacity:.9;
+      top:-30px;
+      animation: fall 1.5s linear forwards;
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,.35));
+    }
+    @keyframes fall{
+      to{
+        transform: translateY(calc(100vh + 60px)) rotate(420deg);
+        opacity:0.95;
+      }
+    }
+
+    /* Setup */
+    .setupGrid{
+      display:grid; gap:10px;
+    }
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    label{ font-size:12px; color:var(--muted); font-weight:750; }
+    input, select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: #1a2b59;
+      color:var(--text);
+      outline:none;
+      font-weight:750;
+    }
+    input::placeholder{ color: rgba(233,240,255,.45); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .row > *{ flex:1; min-width: 180px; }
+
+    .mini{
+      font-size:12px; color:var(--muted); line-height:1.35;
+    }
+    .hr{ height:1px; background: rgba(255,255,255,.10); margin:10px 0; }
+
+    .muted{ color:var(--muted); }
+    .right{ text-align:right; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Trivial Contable FP</h1>
+          <p>Asientos + facturas + balance (jugable en web)</p>
+        </div>
+      </div>
+
+      <div class="topActions">
+        <button class="btn" id="btnNew">Nueva partida</button>
+        <button class="btn" id="btnSave">Guardar</button>
+        <button class="btn danger" id="btnReset">Reiniciar todo</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Board -->
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Tablero</h2>
+          <div class="diceRow">
+            <div class="pill">Turno: <b id="turnName">—</b></div>
+            <div class="pill">Categoría: <b id="turnCat">—</b></div>
+            <div class="dice" id="dice">—</div>
+            <button class="btn primary" id="btnRoll">Tirar dado</button>
+          </div>
+        </div>
+
+        <div class="panelBody boardWrap">
+          <div class="board" id="board" aria-label="Tablero de trivial">
+            <div class="ring"></div>
+            <div class="ring2"></div>
+
+            <div class="center">
+              <div class="title">Centro</div>
+              <div class="sub">
+                Si caes aquí, eliges categoría.<br/>
+                (Ideal para FP: estrategia + repaso rápido)
+              </div>
+            </div>
+
+            <!-- cells injected by JS -->
+            <div class="confetti" id="confetti"></div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Players + Settings -->
+      <div class="panel">
+        <div class="panelHead">
+          <h2>Jugadores y progreso</h2>
+          <span class="pill">Objetivo: <b>Completar quesitos</b></span>
+        </div>
+        <div class="panelBody">
+          <div class="players" id="players"></div>
+
+          <div class="hr"></div>
+
+          <div class="setupGrid">
+            <div class="row">
+              <div class="field">
+                <label for="difficulty">Dificultad</label>
+                <select id="difficulty">
+                  <option value="basico">Básico (Debe/Haber + lógica)</option>
+                  <option value="medio" selected>Medio (incluye asientos completos)</option>
+                  <option value="fp">FP (más balance + trampas finas)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="includeBalance">Balance de situación</label>
+                <select id="includeBalance">
+                  <option value="si" selected>Sí (recomendado)</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mini">
+              <b>Tip FP:</b> activa “FP” para meter preguntas de masas patrimoniales (Activo/Pasivo/PN) y
+              devoluciones/anticipos con más precisión.
+            </div>
+
+            <div class="row">
+              <button class="btn" id="btnSkip">Pasar turno</button>
+              <button class="btn" id="btnRules">Reglas rápidas</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setup Modal -->
+    <div class="modalBack" id="setupBack" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modalHead">
+          <div class="k">
+            <span class="badge"><span class="sw" style="background:var(--c-compras)"></span> Nueva partida</span>
+          </div>
+          <button class="btn" id="setupClose">Cerrar</button>
+        </div>
+        <div class="modalBody">
+          <div class="qCard">
+            <p class="qTitle">Configura jugadores</p>
+            <p class="qText">De 2 a 6 jugadores/equipos. Ideal: 3–4.</p>
+
+            <div class="row">
+              <div class="field">
+                <label for="numPlayers">Nº jugadores</label>
+                <select id="numPlayers">
+                  <option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="seedMode">Banco de preguntas</label>
+                <select id="seedMode">
+                  <option value="mix" selected>PDF + Variaciones + Facturas + Balance</option>
+                  <option value="pdf">Solo PDF (20 asientos)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+            <div id="nameFields"></div>
+
+            <div class="hr"></div>
+            <button class="btn primary" id="setupStart">Empezar</button>
+          </div>
+
+          <div class="explain">
+            <div class="qTitle">Qué incluye este juego</div>
+            <div class="qText">
+• Tus 20 asientos EXACTOS del PDF (Debe/Haber) se usan como “seed”.
+• Se generan preguntas parecidas cambiando importes y contexto (para que no memoricen).
+• Aparecen facturas “bonitas” para que contesten como en la vida real.
+• Balance: clasificar cuentas (Activo/Pasivo/PN/Ingresos/Gastos).
+            </div>
+
+            <div class="kv">
+              <span class="pill"><b>Quesito</b> = acierto en casilla especial</span>
+              <span class="pill"><b>Centro</b> = eliges categoría</span>
+              <span class="pill"><b>FP</b> = más trampas finas</span>
+            </div>
+
+            <div class="invoice" id="setupPreviewInvoice"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question Modal -->
+    <div class="modalBack" id="qBack" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modalHead">
+          <div class="k">
+            <span class="badge" id="catBadge"><span class="sw" id="catSw"></span><span id="catName">—</span></span>
+            <span class="pill">Jugador: <b id="qPlayer">—</b></span>
+          </div>
+          <button class="btn" id="qClose">Cerrar</button>
+        </div>
+
+        <div class="modalBody">
+          <div class="qCard">
+            <p class="qTitle" id="qTitle">—</p>
+            <p class="qText" id="qText">—</p>
+            <div class="optGrid" id="optGrid"></div>
+          </div>
+
+          <div class="explain">
+            <div class="qTitle">Feedback</div>
+            <div class="qText" id="feedback">Responde para ver explicación.</div>
+            <div class="invoice" id="invoiceBox" style="display:none"></div>
+            <div class="row">
+              <button class="btn primary" id="btnContinue" disabled>Continuar</button>
+              <button class="btn" id="btnShowSeat">Ver asiento (T)</button>
+            </div>
+            <div class="invoice" id="seatBox" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div class="modalBack" id="rulesBack" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modalHead">
+          <div class="k"><span class="badge"><span class="sw" style="background:var(--c-tes)"></span> Reglas rápidas</span></div>
+          <button class="btn" id="rulesClose">Cerrar</button>
+        </div>
+        <div class="panelBody" style="padding:14px">
+          <div class="qText" style="margin:0">
+<b>1)</b> Tirar dado → la ficha se mueve casilla a casilla.<br/>
+<b>2)</b> La casilla decide la categoría. En “Centro”, eliges.<br/>
+<b>3)</b> Responde 1 pregunta (4 opciones).<br/>
+<b>4)</b> Si aciertas y es casilla “quesito” → ganas ese quesito.<br/>
+<b>5)</b> Gana quien complete todos los quesitos activos (según Balance ON/OFF).<br/><br/>
+Modo FP recomendado: “Dificultad = FP” + Balance ON.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">—</div>
+  </div>
+
+<script>
+/* =========================================================
+   1) CATEGORÍAS (Trivial + Balance)
+========================================================= */
+const CATEGORIES = [
+  { id:"compras", name:"Compras", color:"var(--c-compras)" },
+  { id:"ventas", name:"Ventas", color:"var(--c-ventas)" },
+  { id:"servicios", name:"Servicios", color:"var(--c-servicios)" },
+  { id:"marketing", name:"Marketing / Externos", color:"var(--c-marketing)" },
+  { id:"devol", name:"Devoluciones", color:"var(--c-devol)" },
+  { id:"tes", name:"Tesorería / Anticipos", color:"var(--c-tes)" },
+  { id:"balance", name:"Balance / Masas", color:"var(--c-balance)" },
+];
+
+function catById(id){ return CATEGORIES.find(c=>c.id===id); }
+
+/* =========================================================
+   2) ASIENTOS BASE (LOS 20 EXACTOS DEL PDF)
+   (Estos están copiados tal cual del PDF). :contentReference[oaicite:1]{index=1}
+========================================================= */
+const PDF_SEATS = [
+  { id:1, label:"Factura 1 · Compra stock a crédito", cat:"compras",
+    lines:[
+      {side:"DEBE", acc:"600", name:"Compras", amount:840},
+      {side:"HABER", acc:"400", name:"Proveedores", amount:840},
+    ],
+    invoice: { kind:"compra", supplier:"Suministros Norte S.L.", customer:"—", concept:"Stock de mercancías", qty:1, unit:840, vat:0 }
+  },
+  { id:2, label:"Factura 2 · Compra al contado", cat:"compras",
+    lines:[
+      {side:"DEBE", acc:"600", name:"Compras", amount:185},
+      {side:"HABER", acc:"572", name:"Banco", amount:185},
+    ],
+    invoice: { kind:"compra", supplier:"Papelería Atlas", customer:"—", concept:"Material de oficina (compra)", qty:1, unit:185, vat:0 }
+  },
+  { id:3, label:"Factura 3 · Compra con descuento", cat:"compras",
+    lines:[
+      {side:"DEBE", acc:"600", name:"Compras", amount:850},
+      {side:"HABER", acc:"400", name:"Proveedores", amount:850},
+    ],
+    invoice: { kind:"compra", supplier:"Distribuciones Vega", customer:"—", concept:"Compra con descuento aplicado", qty:1, unit:850, vat:0 }
+  },
+  { id:4, label:"Factura 4 · Servicio diseño", cat:"marketing",
+    lines:[
+      {side:"DEBE", acc:"627", name:"Publicidad y propaganda", amount:600},
+      {side:"HABER", acc:"400", name:"Proveedores", amount:600},
+    ],
+    invoice: { kind:"servicio", supplier:"Estudio Pixel", customer:"—", concept:"Diseño de campaña (branding)", qty:1, unit:600, vat:0 }
+  },
+  { id:5, label:"Factura 5 · Servicio futuro", cat:"marketing",
+    lines:[
+      {side:"DEBE", acc:"627", name:"Servicios exteriores", amount:900},
+      {side:"HABER", acc:"400", name:"Proveedores", amount:900},
+    ],
+    invoice: { kind:"servicio", supplier:"Consultoría Delta", customer:"—", concept:"Servicio contratado (externo)", qty:1, unit:900, vat:0 }
+  },
+  { id:6, label:"Factura 6 · Venta al contado", cat:"ventas",
+    lines:[
+      {side:"DEBE", acc:"572", name:"Banco", amount:750},
+      {side:"HABER", acc:"700", name:"Ventas", amount:750},
+    ],
+    invoice: { kind:"venta", supplier:"—", customer:"Cliente Mostrador", concept:"Venta al contado", qty:1, unit:750, vat:0 }
+  },
+  { id:7, label:"Factura 7 · Venta a crédito", cat:"ventas",
+    lines:[
+      {side:"DEBE", acc:"430", name:"Clientes", amount:4500},
+      {side:"HABER", acc:"700", name:"Ventas", amount:4500},
+    ],
+    invoice: { kind:"venta", supplier:"—", customer:"Hotel Brisa", concept:"Venta a crédito (plazo 30 días)", qty:1, unit:4500, vat:0 }
+  },
+  { id:8, label:"Factura 8 · Venta con descuento", cat:"ventas",
+    lines:[
+      {side:"DEBE", acc:"430", name:"Clientes", amount:2100},
+      {side:"HABER", acc:"700", name:"Ventas", amount:2100},
+    ],
+    invoice: { kind:"venta", supplier:"—", customer:"Clínica Central", concept:"Venta con descuento comercial", qty:1, unit:2100, vat:0 }
+  },
+  { id:9, label:"Factura 9 · Servicio prestado", cat:"servicios",
+    lines:[
+      {side:"DEBE", acc:"430", name:"Clientes", amount:1250},
+      {side:"HABER", acc:"705", name:"Prestación de servicios", amount:1250},
+    ],
+    invoice: { kind:"servicio", supplier:"—", customer:"Academia Nova", concept:"Servicio prestado (facturado)", qty:1, unit:1250, vat:0 }
+  },
+  { id:10, label:"Factura 10 · Consultoría", cat:"servicios",
+    lines:[
+      {side:"DEBE", acc:"430", name:"Clientes", amount:1800},
+      {side:"HABER", acc:"705", name:"Prestación de servicios", amount:1800},
+    ],
+    invoice: { kind:"servicio", supplier:"—", customer:"Tech Lumen", concept:"Consultoría (proyecto)", qty:1, unit:1800, vat:0 }
+  },
+  { id:11, label:"Factura 11 · Devolución compra", cat:"devol",
+    lines:[
+      {side:"DEBE", acc:"400", name:"Proveedores", amount:240},
+      {side:"HABER", acc:"608", name:"Devoluciones de compras", amount:240},
+    ],
+    invoice: { kind:"rectificativa_compra", supplier:"Distribuciones Vega", customer:"—", concept:"Devolución a proveedor (compra)", qty:1, unit:240, vat:0 }
+  },
+  { id:12, label:"Factura 12 · Devolución venta", cat:"devol",
+    lines:[
+      {side:"DEBE", acc:"708", name:"Devoluciones de ventas", amount:300},
+      {side:"HABER", acc:"430", name:"Clientes", amount:300},
+    ],
+    invoice: { kind:"rectificativa_venta", supplier:"—", customer:"Clínica Central", concept:"Devolución cliente (venta)", qty:1, unit:300, vat:0 }
+  },
+  { id:13, label:"Factura 13 · Rectificativa venta", cat:"devol",
+    lines:[
+      {side:"DEBE", acc:"708", name:"Devoluciones de ventas", amount:200},
+      {side:"HABER", acc:"430", name:"Clientes", amount:200},
+    ],
+    invoice: { kind:"rectificativa_venta", supplier:"—", customer:"Hotel Brisa", concept:"Rectificativa por devolución", qty:1, unit:200, vat:0 }
+  },
+  { id:14, label:"Factura 14 · Pago parcial proveedor", cat:"tes",
+    lines:[
+      {side:"DEBE", acc:"400", name:"Proveedores", amount:500},
+      {side:"HABER", acc:"572", name:"Banco", amount:500},
+    ],
+    invoice: { kind:"pago", supplier:"Suministros Norte S.L.", customer:"—", concept:"Pago parcial a proveedor", qty:1, unit:500, vat:0 }
+  },
+  { id:15, label:"Factura 15 · Cobro parcial cliente", cat:"tes",
+    lines:[
+      {side:"DEBE", acc:"572", name:"Banco", amount:2000},
+      {side:"HABER", acc:"430", name:"Clientes", amount:2000},
+    ],
+    invoice: { kind:"cobro", supplier:"—", customer:"Tech Lumen", concept:"Cobro parcial cliente", qty:1, unit:2000, vat:0 }
+  },
+  { id:16, label:"Factura 16 · Venta varias líneas", cat:"ventas",
+    lines:[
+      {side:"DEBE", acc:"430", name:"Clientes", amount:3500},
+      {side:"HABER", acc:"700", name:"Ventas", amount:3500},
+    ],
+    invoice: { kind:"venta", supplier:"—", customer:"Distribuidora Sur", concept:"Venta varias líneas (resumen)", qty:1, unit:3500, vat:0 }
+  },
+  { id:17, label:"Factura 17 · Compra con transporte", cat:"compras",
+    lines:[
+      {side:"DEBE", acc:"600", name:"Compras", amount:1350},
+      {side:"HABER", acc:"400", name:"Proveedores", amount:1350},
+    ],
+    invoice: { kind:"compra", supplier:"Logística Sierra", customer:"—", concept:"Compra + transporte incluido", qty:1, unit:1350, vat:0 }
+  },
+  { id:18, label:"Factura 18 · Anticipo recibido", cat:"tes",
+    lines:[
+      {side:"DEBE", acc:"572", name:"Banco", amount:1000},
+      {side:"HABER", acc:"438", name:"Anticipos de clientes", amount:1000},
+    ],
+    invoice: { kind:"anticipo_cliente", supplier:"—", customer:"Academia Nova", concept:"Anticipo recibido de cliente", qty:1, unit:1000, vat:0 }
+  },
+  { id:19, label:"Factura 19 · Anticipo a proveedor", cat:"tes",
+    lines:[
+      {side:"DEBE", acc:"407", name:"Anticipos a proveedores", amount:800},
+      {side:"HABER", acc:"572", name:"Banco", amount:800},
+    ],
+    invoice: { kind:"anticipo_proveedor", supplier:"Consultoría Delta", customer:"—", concept:"Anticipo entregado a proveedor", qty:1, unit:800, vat:0 }
+  },
+  { id:20, label:"Factura 20 · Factura mensual", cat:"servicios",
+    lines:[
+      {side:"DEBE", acc:"430", name:"Clientes", amount:2300},
+      {side:"HABER", acc:"705", name:"Prestación de servicios", amount:2300},
+    ],
+    invoice: { kind:"servicio", supplier:"—", customer:"Clínica Central", concept:"Factura mensual de servicio", qty:1, unit:2300, vat:0 }
+  },
+];
+
+/* =========================================================
+   3) BALANCE / MASAS: mapa de cuentas (enfoque FP)
+   Nota: aquí metemos “Activo / Pasivo / PN / Ingresos / Gastos”
+========================================================= */
+const ACCOUNT_CLASS = {
+  "572": {type:"Activo", why:"Banco (dinero en cuentas bancarias) es Activo corriente."},
+  "430": {type:"Activo", why:"Clientes (derechos de cobro) es Activo corriente."},
+  "407": {type:"Activo", why:"Anticipos a proveedores (derecho) suele tratarse como Activo."},
+
+  "400": {type:"Pasivo", why:"Proveedores (deudas con proveedores) es Pasivo corriente."},
+  "438": {type:"Pasivo", why:"Anticipos de clientes es obligación futura → Pasivo corriente."},
+
+  "700": {type:"Ingresos", why:"Ventas es cuenta de Ingresos (PyG)."},
+  "705": {type:"Ingresos", why:"Prestación de servicios es cuenta de Ingresos (PyG)."},
+  "708": {type:"Ingresos", why:"Devoluciones de ventas corrige ingresos (naturaleza de ingresos, signo contrario)."},
+  "600": {type:"Gastos", why:"Compras es cuenta de Gastos (PyG)."},
+  "627": {type:"Gastos", why:"Publicidad/Servicios exteriores es Gastos (PyG)."},
+  "608": {type:"Gastos", why:"Devoluciones de compras corrige gastos (naturaleza de gasto, signo contrario)."},
+};
+
+/* =========================================================
+   4) GENERADOR DE VARIACIONES + PREGUNTAS
+========================================================= */
+function rnd(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function formatEUR(n){
+  // para FP: miles con punto
+  const s = n.toLocaleString("es-ES", {minimumFractionDigits:0, maximumFractionDigits:0});
+  return s + " €";
+}
+
+function seatToTHTML(seat){
+  const debe = seat.lines.filter(l=>l.side==="DEBE");
+  const haber = seat.lines.filter(l=>l.side==="HABER");
+  const row = (l)=> `<div style="display:flex;justify-content:space-between;gap:10px">
+      <div><b>${l.acc}</b> ${l.name}</div><div>${formatEUR(l.amount)}</div></div>`;
+  return `
+    <div style="color:var(--text);font-weight:900;margin-bottom:6px">${seat.label}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px;background:rgba(255,255,255,.04)">
+        <div style="font-weight:900;margin-bottom:6px">DEBE</div>
+        ${debe.map(row).join("")}
+      </div>
+      <div style="border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px;background:rgba(255,255,255,.04)">
+        <div style="font-weight:900;margin-bottom:6px">HABER</div>
+        ${haber.map(row).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function invoiceHTML(inv, total){
+  const id = "F-" + rnd(1000,9999);
+  const date = new Date();
+  const d = date.toLocaleDateString("es-ES");
+  const kindLabel = {
+    compra:"FACTURA COMPRA",
+    venta:"FACTURA VENTA",
+    servicio:"FACTURA SERVICIO",
+    rectificativa_compra:"RECTIFICATIVA (COMPRA)",
+    rectificativa_venta:"RECTIFICATIVA (VENTA)",
+    pago:"JUSTIFICANTE PAGO",
+    cobro:"JUSTIFICANTE COBRO",
+    anticipo_cliente:"RECIBO ANTICIPO (CLIENTE)",
+    anticipo_proveedor:"RECIBO ANTICIPO (PROVEEDOR)"
+  }[inv.kind] || "DOCUMENTO";
+
+  return `
+    <div class="invTop">
+      <div>
+        <b>${kindLabel}</b><div style="opacity:.9">Nº ${id} · ${d}</div>
+      </div>
+      <div class="right">
+        <div><b>Importe</b></div>
+        <div style="font-size:14px">${formatEUR(total)}</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+      <span class="pill"><b>Emisor</b> ${inv.supplier || "Empresa"}</span>
+      <span class="pill"><b>Cliente</b> ${inv.customer || "—"}</span>
+    </div>
+
+    <div class="invGrid">
+      <div class="h">Concepto</div><div class="h right">Ud</div><div class="h right">P.Unit</div><div class="h right">Total</div>
+      <div>${inv.concept}</div>
+      <div class="right">${inv.qty}</div>
+      <div class="right">${formatEUR(inv.unit)}</div>
+      <div class="right">${formatEUR(inv.qty*inv.unit)}</div>
+    </div>
+
+    <div class="invTotal">
+      <div>Total:</div><div>${formatEUR(total)}</div>
+    </div>
+  `;
+}
+
+function cloneSeatWithVariation(seat){
+  // cambia cantidad manteniendo lógica
+  const factor = [0.8,0.9,1.1,1.15,1.2][rnd(0,4)];
+  const newSeat = JSON.parse(JSON.stringify(seat));
+  newSeat.id = "v"+seat.id+"_"+rnd(100,999);
+  newSeat.label = seat.label.replace("Factura","Caso").replace("·","—") + " (variación)";
+  newSeat.lines.forEach(l=>{
+    l.amount = Math.max(50, Math.round(l.amount*factor/10)*10);
+  });
+  // asegurar sumas cuadradas (por si en el futuro hay varias líneas)
+  const debe = newSeat.lines.filter(l=>l.side==="DEBE").reduce((s,l)=>s+l.amount,0);
+  const haber = newSeat.lines.filter(l=>l.side==="HABER").reduce((s,l)=>s+l.amount,0);
+  if(debe!==haber){
+    // ajusta la última línea del HABER
+    const lastH = [...newSeat.lines].reverse().find(l=>l.side==="HABER");
+    if(lastH) lastH.amount += (debe-haber);
+  }
+  if(newSeat.invoice){
+    newSeat.invoice.unit = newSeat.lines[0].amount; // simple: 1 línea
+    newSeat.invoice.concept += " (importe actualizado)";
+  }
+  return newSeat;
+}
+
+function accountOption(acc, name){
+  return `${acc} ${name}`;
+}
+
+function makeQuestions({mode="mix", difficulty="medio", includeBalance=true}){
+  const seats = (mode==="pdf") ? [...PDF_SEATS] : [...PDF_SEATS, ...PDF_SEATS.map(cloneSeatWithVariation)];
+  const questions = [];
+
+  // helpers
+  const allAccounts = [
+    {acc:"600", name:"Compras"},
+    {acc:"400", name:"Proveedores"},
+    {acc:"572", name:"Banco"},
+    {acc:"700", name:"Ventas"},
+    {acc:"430", name:"Clientes"},
+    {acc:"705", name:"Prestación de servicios"},
+    {acc:"627", name:"Publicidad y propaganda / Servicios exteriores"},
+    {acc:"608", name:"Devoluciones de compras"},
+    {acc:"708", name:"Devoluciones de ventas"},
+    {acc:"438", name:"Anticipos de clientes"},
+    {acc:"407", name:"Anticipos a proveedores"},
+  ];
+
+  function distractors(correctAcc){
+    const pool = allAccounts.filter(a=>a.acc!==correctAcc);
+    return shuffle(pool).slice(0,3);
+  }
+
+  // A/B: qué va en Debe/Haber
+  for(const seat of seats){
+    const debeLine = seat.lines.find(l=>l.side==="DEBE");
+    const haberLine = seat.lines.find(l=>l.side==="HABER");
+
+    // Tipo A: cuenta en DEBE
+    {
+      const correct = accountOption(debeLine.acc, debeLine.name);
+      const opts = shuffle([correct, ...distractors(debeLine.acc).map(a=>accountOption(a.acc,a.name))]);
+      questions.push({
+        id:"A_"+seat.id,
+        cat: seat.cat,
+        title:"¿Qué cuenta va en el DEBE?",
+        text:`Situación: ${seat.label}
+¿Cuál es la cuenta que debe cargarse (DEBE)?`,
+        options: opts,
+        correctIndex: opts.indexOf(correct),
+        explanation:`En este asiento, el DEBE recoge ${debeLine.acc} ${debeLine.name} por ${formatEUR(debeLine.amount)}.`,
+        seat,
+        showInvoice: true,
+      });
+    }
+
+    // Tipo B: cuenta en HABER
+    {
+      const correct = accountOption(haberLine.acc, haberLine.name);
+      const opts = shuffle([correct, ...distractors(haberLine.acc).map(a=>accountOption(a.acc,a.name))]);
+      questions.push({
+        id:"B_"+seat.id,
+        cat: seat.cat,
+        title:"¿Qué cuenta va en el HABER?",
+        text:`Situación: ${seat.label}
+¿Cuál es la cuenta que se abona (HABER)?`,
+        options: opts,
+        correctIndex: opts.indexOf(correct),
+        explanation:`En el HABER se registra ${haberLine.acc} ${haberLine.name} por ${formatEUR(haberLine.amount)}.`,
+        seat,
+        showInvoice: true,
+      });
+    }
+
+    // D/E/F/G específicos (más FP)
+    // D: Cliente o proveedor (430 vs 400) cuando aplica
+    if(["400","430"].includes(debeLine.acc) || ["400","430"].includes(haberLine.acc)){
+      const correct = (seat.lines.some(l=>l.acc==="430")) ? "430 Clientes" : "400 Proveedores";
+      const opts = shuffle([correct, correct==="430 Clientes"?"400 Proveedores":"430 Clientes", "572 Banco", "700 Ventas"]);
+      questions.push({
+        id:"D_"+seat.id,
+        cat: seat.cat,
+        title:"Identifica el tercero correcto",
+        text:`Situación: ${seat.label}
+¿Con quién estamos relacionando la operación?`,
+        options: opts,
+        correctIndex: opts.indexOf(correct),
+        explanation:`Si es una deuda con proveedor → 400. Si es derecho de cobro a cliente → 430. En este caso aparece: ${correct}.`,
+        seat,
+        showInvoice: false,
+      });
+    }
+
+    // E: Cobro o pago parcial (cuando hay 572 + 430/400)
+    const has572 = seat.lines.some(l=>l.acc==="572");
+    const has430 = seat.lines.some(l=>l.acc==="430");
+    const has400 = seat.lines.some(l=>l.acc==="400");
+    if(has572 && (has430 || has400)){
+      const correct = (has430 && seat.lines.find(l=>l.acc==="430")?.side==="HABER") ? "Cobro a cliente" :
+                      (has400 && seat.lines.find(l=>l.acc==="400")?.side==="DEBE") ? "Pago a proveedor" :
+                      "Movimiento de tesorería";
+      const opts = shuffle([correct, "Compra a crédito", "Venta a crédito", "Regularización de existencias"]);
+      questions.push({
+        id:"E_"+seat.id,
+        cat: "tes",
+        title:"¿Es cobro o pago?",
+        text:`Ves Banco (572) y una cuenta de terceros.
+Según el asiento: ${seat.label}
+¿Qué describe mejor la operación?`,
+        options: opts,
+        correctIndex: opts.indexOf(correct),
+        explanation:`Con 572 Banco: si 430 va al HABER suele ser cobro (disminuye clientes). Si 400 va al DEBE suele ser pago (disminuye proveedores).`,
+        seat,
+        showInvoice: true,
+      });
+    }
+
+    // F: Devolución compra/venta (608 vs 708)
+    const has608 = seat.lines.some(l=>l.acc==="608");
+    const has708 = seat.lines.some(l=>l.acc==="708");
+    if(has608 || has708){
+      const correct = has608 ? "608 Devoluciones de compras" : "708 Devoluciones de ventas";
+      const opts = shuffle([correct, correct.startsWith("608")?"708 Devoluciones de ventas":"608 Devoluciones de compras", "600 Compras", "700 Ventas"]);
+      questions.push({
+        id:"F_"+seat.id,
+        cat: "devol",
+        title:"Devoluciones: elige la cuenta correcta",
+        text:`Situación: ${seat.label}
+¿Qué cuenta corresponde a este tipo de devolución/rectificativa?`,
+        options: opts,
+        correctIndex: opts.indexOf(correct),
+        explanation:`608 corrige compras (gasto). 708 corrige ventas/ingresos (en sentido contrario).`,
+        seat,
+        showInvoice: true,
+      });
+    }
+
+    // G: Anticipos (438 vs 407)
+    const has438 = seat.lines.some(l=>l.acc==="438");
+    const has407 = seat.lines.some(l=>l.acc==="407");
+    if(has438 || has407){
+      const correct = has438 ? "438 Anticipos de clientes" : "407 Anticipos a proveedores";
+      const opts = shuffle([correct, correct.startsWith("438")?"407 Anticipos a proveedores":"438 Anticipos de clientes", "400 Proveedores", "430 Clientes"]);
+      questions.push({
+        id:"G_"+seat.id,
+        cat: "tes",
+        title:"Anticipos: identifica la cuenta",
+        text:`Situación: ${seat.label}
+¿Qué cuenta de anticipo se está usando?`,
+        options: opts,
+        correctIndex: opts.indexOf(correct),
+        explanation:`438 = dinero recibido antes de vender/prestar (obligación → pasivo). 407 = dinero entregado antes de recibir compra (derecho → activo).`,
+        seat,
+        showInvoice: true,
+      });
+    }
+
+    // C: “elige el asiento correcto” (solo en medio/FP)
+    if(difficulty!=="basico"){
+      const correctT = seatToShort(seat);
+      const wrongs = shuffle(PDF_SEATS.filter(s=>s.id!==seat.id)).slice(0,3).map(seatToShort);
+      const options = shuffle([correctT, ...wrongs]);
+      questions.push({
+        id:"C_"+seat.id,
+        cat: seat.cat,
+        title:"Elige el asiento correcto",
+        text:`Selecciona el asiento (resumen) que corresponde a:
+${seat.label}`,
+        options,
+        correctIndex: options.indexOf(correctT),
+        explanation:`El correcto es el que refleja DEBE/HABER coherente con la operación y el importe.`,
+        seat,
+        showInvoice: true,
+      });
+    }
+  }
+
+  // BALANCE: clasificar cuentas (Activo/Pasivo/PN/Ingresos/Gastos)
+  if(includeBalance){
+    const accs = Object.keys(ACCOUNT_CLASS);
+    const massOptions = ["Activo","Pasivo","Patrimonio Neto","Ingresos","Gastos"];
+
+    for(let i=0;i<Math.max(24, accs.length*3);i++){
+      const acc = pick(accs);
+      const info = ACCOUNT_CLASS[acc];
+      const opts = shuffle([info.type, ...shuffle(massOptions.filter(x=>x!==info.type)).slice(0,3)]);
+      questions.push({
+        id:"BAL_"+i+"_"+acc,
+        cat:"balance",
+        title:"Balance: clasifica la cuenta",
+        text:`¿A qué bloque pertenece la cuenta ${acc}?
+(Elige la opción más correcta)`,
+        options: opts,
+        correctIndex: opts.indexOf(info.type),
+        explanation:`${acc} → ${info.type}. ${info.why}`,
+        seat: null,
+        showInvoice: false,
+      });
+    }
+  }
+
+  // Ajustes por dificultad
+  let filtered = questions;
+  if(difficulty==="basico"){
+    filtered = questions.filter(q=> !q.id.startsWith("C_")); // sin “asiento completo”
+  } else if(difficulty==="medio"){
+    // ok: todo menos “balance extra denso”
+    filtered = questions;
+  } else if(difficulty==="fp"){
+    // FP: mete más balance y más “elige asiento”
+    // ya viene cargado; solo priorizamos balance y C_ al mezclar
+    filtered = questions;
+  }
+
+  return shuffle(filtered);
+}
+
+function seatToShort(seat){
+  const d = seat.lines.find(l=>l.side==="DEBE");
+  const h = seat.lines.find(l=>l.side==="HABER");
+  return `DEBE: ${d.acc} ${d.name} ${formatEUR(d.amount)} | HABER: ${h.acc} ${h.name} ${formatEUR(h.amount)}`;
+}
+
+/* =========================================================
+   5) TABLERO (posiciones + wedges)
+   Diseño: anillo de 24 casillas + centro
+========================================================= */
+const BOARD = {
+  // 24 positions around
+  positions: [
+    {cat:"compras", wedge:false},
+    {cat:"ventas", wedge:false},
+    {cat:"servicios", wedge:false},
+    {cat:"marketing", wedge:true},     // wedge
+    {cat:"devol", wedge:false},
+    {cat:"tes", wedge:false},
+    {cat:"balance", wedge:true},       // wedge
+    {cat:"compras", wedge:false},
+    {cat:"ventas", wedge:true},        // wedge
+    {cat:"servicios", wedge:false},
+    {cat:"marketing", wedge:false},
+    {cat:"devol", wedge:true},         // wedge
+    {cat:"tes", wedge:false},
+    {cat:"balance", wedge:false},
+    {cat:"compras", wedge:true},       // wedge
+    {cat:"ventas", wedge:false},
+    {cat:"servicios", wedge:true},     // wedge
+    {cat:"marketing", wedge:false},
+    {cat:"devol", wedge:false},
+    {cat:"tes", wedge:true},           // wedge
+    {cat:"balance", wedge:false},
+    {cat:"compras", wedge:false},
+    {cat:"ventas", wedge:false},
+    {cat:"servicios", wedge:false},
+  ],
+  center: {cat:"center", wedge:false},
+};
+
+function buildBoard(){
+  const boardEl = document.getElementById("board");
+  // remove existing cells except rings/center/confetti
+  [...boardEl.querySelectorAll(".cell")].forEach(n=>n.remove());
+  [...boardEl.querySelectorAll(".token")].forEach(n=>n.remove());
+
+  const rect = boardEl.getBoundingClientRect();
+  const cx = rect.width/2;
+  const cy = rect.height/2;
+  const r = rect.width*0.37; // ring radius
+  const n = BOARD.positions.length;
+
+  for(let i=0;i<n;i++){
+    const a = (Math.PI*2) * (i/n) - Math.PI/2;
+    const x = cx + r*Math.cos(a);
+    const y = cy + r*Math.sin(a);
+
+    const p = BOARD.positions[i];
+    const cat = catById(p.cat);
+    const cell = document.createElement("div");
+    cell.className = "cell" + (p.wedge ? " wedge":"");
+    cell.style.left = (x-28) + "px";
+    cell.style.top  = (y-28) + "px";
+    cell.dataset.idx = i;
+    cell.dataset.cat = p.cat;
+
+    cell.style.background = `linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.08))`;
+    cell.style.borderColor = "rgba(255,255,255,.14)";
+    cell.innerHTML = `<div class="dot"></div>`;
+
+    // colored glow
+    cell.style.boxShadow = `0 18px 40px rgba(0,0,0,.35), 0 0 0 6px rgba(255,255,255,.03), 0 0 40px ${cat.color.replace("var","").includes("--")? "rgba(255,255,255,.0)" : cat.color}`;
+    // border accent
+    cell.style.outline = `2px solid rgba(255,255,255,.0)`;
+    cell.style.setProperty("--cat", cat.color);
+    cell.style.borderColor = "rgba(255,255,255,.14)";
+
+    // add small corner mark by category color
+    const mark = document.createElement("div");
+    mark.style.position="absolute";
+    mark.style.right="8px";
+    mark.style.top="8px";
+    mark.style.width="10px";
+    mark.style.height="10px";
+    mark.style.borderRadius="999px";
+    mark.style.background=cat.color;
+    mark.style.boxShadow="0 0 0 6px rgba(255,255,255,.06)";
+    cell.appendChild(mark);
+
+    if(p.wedge){
+      const star = document.createElement("div");
+      star.textContent = "★";
+      star.style.position="absolute";
+      star.style.left="10px";
+      star.style.bottom="8px";
+      star.style.fontWeight="900";
+      star.style.opacity=".9";
+      star.style.filter="drop-shadow(0 8px 10px rgba(0,0,0,.35))";
+      cell.appendChild(star);
+    }
+
+    boardEl.appendChild(cell);
+  }
+
+  // Legend
+  const leg = document.getElementById("legend");
+  leg.innerHTML = "";
+  for(const c of CATEGORIES){
+    const t = document.createElement("div");
+    t.className = "tag";
+    t.innerHTML = `<span class="sw" style="background:${c.color}"></span>${c.name}`;
+    leg.appendChild(t);
+  }
+}
+
+/* =========================================================
+   6) ESTADO DE JUEGO + PERSISTENCIA
+========================================================= */
+const STORAGE_KEY = "trivial_contable_fp_v1";
+
+const DEFAULT_STATE = {
+  started:false,
+  mode:"mix",
+  difficulty:"medio",
+  includeBalance:true,
+  players:[],
+  activeCats: ["compras","ventas","servicios","marketing","devol","tes","balance"],
+  turn:0,
+  lastRoll:null,
+  tokenPos:[], // per player (index on ring)
+  wedges:[],   // per player: Set-like object
+  qBank:[],
+  qIndex:0,
+};
+
+let state = loadState() || structuredClone(DEFAULT_STATE);
+
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  toast("Guardado ✅");
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function hardReset(){
+  localStorage.removeItem(STORAGE_KEY);
+  state = structuredClone(DEFAULT_STATE);
+  toast("Reiniciado ✅");
+  renderAll();
+}
+
+/* =========================================================
+   7) UI HELPERS
+========================================================= */
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(()=> el.classList.remove("show"), 1400);
+}
+
+function confetti(){
+  const wrap = document.getElementById("confetti");
+  wrap.innerHTML = "";
+  wrap.classList.add("show");
+  const colors = [
+    getComputedStyle(document.documentElement).getPropertyValue("--c-compras").trim(),
+    getComputedStyle(document.documentElement).getPropertyValue("--c-ventas").trim(),
+    getComputedStyle(document.documentElement).getPropertyValue("--c-servicios").trim(),
+    getComputedStyle(document.documentElement).getPropertyValue("--c-marketing").trim(),
+    getComputedStyle(document.documentElement).getPropertyValue("--c-devol").trim(),
+    getComputedStyle(document.documentElement).getPropertyValue("--c-tes").trim(),
+    getComputedStyle(document.documentElement).getPropertyValue("--c-balance").trim(),
+  ];
+  for(let i=0;i<60;i++){
+    const p = document.createElement("i");
+    p.style.left = rnd(0,100) + "vw";
+    p.style.background = pick(colors);
+    p.style.animationDuration = (1.1 + Math.random()*0.9) + "s";
+    p.style.transform = `rotate(${rnd(0,180)}deg)`;
+    wrap.appendChild(p);
+  }
+  setTimeout(()=> wrap.classList.remove("show"), 1600);
+}
+
+function activeCategories(){
+  const base = ["compras","ventas","servicios","marketing","devol","tes"];
+  if(state.includeBalance) base.push("balance");
+  return base;
+}
+
+function wedgesNeeded(){
+  return activeCategories().length;
+}
+
+/* =========================================================
+   8) RENDER
+========================================================= */
+function renderPlayers(){
+  const wrap = document.getElementById("players");
+  wrap.innerHTML = "";
+
+  if(!state.started){
+    wrap.innerHTML = `<div class="mini">Pulsa <b>Nueva partida</b> para empezar.</div>`;
+    return;
+  }
+
+  const cats = activeCategories();
+  state.players.forEach((p, idx)=>{
+    const card = document.createElement("div");
+    card.className = "playerCard";
+    const isTurn = idx === state.turn;
+
+    const wedgesArr = cats.map(cid=>{
+      const on = state.wedges[idx]?.includes(cid);
+      const c = catById(cid);
+      return `<span class="w ${on?"on":""}" title="${c.name}" style="background:${c.color};border-color:rgba(255,255,255,.22)"></span>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div class="playerLeft">
+        <span class="chip" style="background:${p.color}"></span>
+        <div>
+          <div class="playerName">${p.name}${isTurn ? " · ✅" : ""}</div>
+          <div class="playerMeta">Quesitos: <b style="color:var(--text)">${(state.wedges[idx]?.length||0)}/${wedgesNeeded()}</b></div>
+        </div>
+      </div>
+      <div class="wedges">${wedgesArr}</div>
+    `;
+    wrap.appendChild(card);
+  });
+
+  document.getElementById("turnName").textContent = state.players[state.turn]?.name || "—";
+}
+
+function renderTokens(){
+  const boardEl = document.getElementById("board");
+  // remove existing
+  [...boardEl.querySelectorAll(".token")].forEach(n=>n.remove());
+
+  const rect = boardEl.getBoundingClientRect();
+  const cx = rect.width/2;
+  const cy = rect.height/2;
+  const r = rect.width*0.37;
+  const n = BOARD.positions.length;
+
+  state.players.forEach((p, idx)=>{
+    const pos = state.tokenPos[idx] ?? 0;
+    const a = (Math.PI*2) * (pos/n) - Math.PI/2;
+    const x = cx + r*Math.cos(a);
+    const y = cy + r*Math.sin(a);
+
+    // small offset per player so tokens don't overlap
+    const off = (idx - (state.players.length-1)/2) * 10;
+    const tx = x + off;
+    const ty = y + off;
+
+    const t = document.createElement("div");
+    t.className = "token";
+    t.style.background = p.color;
+    t.style.left = tx + "px";
+    t.style.top  = ty + "px";
+    boardEl.appendChild(t);
+  });
+
+  // active cell highlight
+  const idx = state.tokenPos[state.turn] ?? 0;
+  document.querySelectorAll(".cell").forEach(c=>c.classList.remove("active"));
+  const active = document.querySelector(`.cell[data-idx="${idx}"]`);
+  if(active) active.classList.add("active");
+}
+
+function renderTopCategory(){
+  if(!state.started){
+    document.getElementById("turnCat").textContent = "—";
+    return;
+  }
+  const pos = state.tokenPos[state.turn] ?? 0;
+  const catId = BOARD.positions[pos].cat;
+  document.getElementById("turnCat").textContent = catById(catId)?.name || "Centro";
+}
+
+function renderAll(){
+  buildBoard();
+  renderPlayers();
+  renderTokens();
+  renderTopCategory();
+  document.getElementById("difficulty").value = state.difficulty;
+  document.getElementById("includeBalance").value = state.includeBalance ? "si":"no";
+}
+
+window.addEventListener("resize", ()=> {
+  // re-render tokens to fit positions
+  if(state.started){
+    buildBoard();
+    renderTokens();
+  }
+});
+
+/* =========================================================
+   9) GAME LOGIC
+========================================================= */
+function startGame({players, mode, difficulty, includeBalance}){
+  state.started = true;
+  state.mode = mode;
+  state.difficulty = difficulty;
+  state.includeBalance = includeBalance;
+
+  state.players = players;
+  state.turn = 0;
+  state.lastRoll = null;
+
+  state.tokenPos = players.map(()=> 0);
+  state.wedges = players.map(()=> []);
+  state.qBank = makeQuestions({mode, difficulty, includeBalance});
+  state.qIndex = 0;
+
+  saveState();
+  renderAll();
+  toast("Partida creada 🎲");
+}
+
+function nextTurn(){
+  state.turn = (state.turn + 1) % state.players.length;
+  state.lastRoll = null;
+  document.getElementById("dice").textContent = "—";
+  saveState();
+  renderAll();
+}
+
+function rollDice(){
+  if(!state.started) return toast("Primero crea una partida.");
+  // lock if question open
+  if(document.getElementById("qBack").classList.contains("show")) return;
+
+  const roll = rnd(1,6);
+  state.lastRoll = roll;
+
+  // dice animation
+  const diceEl = document.getElementById("dice");
+  diceEl.textContent = "…";
+  let ticks = 10;
+  const int = setInterval(()=>{
+    diceEl.textContent = rnd(1,6);
+    ticks--;
+    if(ticks<=0){
+      clearInterval(int);
+      diceEl.textContent = roll;
+      moveToken(roll);
+    }
+  }, 55);
+}
+
+async function moveToken(steps){
+  const p = state.turn;
+  const n = BOARD.positions.length;
+  let pos = state.tokenPos[p] ?? 0;
+
+  for(let s=0; s<steps; s++){
+    pos = (pos + 1) % n;
+    state.tokenPos[p] = pos;
+    renderTokens();
+    await new Promise(res=> setTimeout(res, 120));
+  }
+
+  saveState();
+  renderAll();
+  openQuestionForLanding();
+}
+
+function openQuestionForLanding(){
+  const p = state.turn;
+  const pos = state.tokenPos[p] ?? 0;
+  const land = BOARD.positions[pos];
+
+  // category may be inactive if balance off
+  let catId = land.cat;
+  if(catId==="balance" && !state.includeBalance){
+    // reroute to random normal category
+    catId = pick(["compras","ventas","servicios","marketing","devol","tes"]);
+  }
+
+  // if "center" (not implemented as position; center is visual)
+  // We'll treat position 0 as "center choice" occasionally:
+  // Instead, we allow: if player lands on a wedge cell and presses "Tirar dado" next time; but better:
+  // We'll implement a “choose category” if pos is multiple of 12 (two opposite points).
+  const choose = (pos===0 || pos===12);
+  if(choose){
+    catId = chooseCategory(catId);
+  }
+
+  // pick question matching category
+  const q = pickQuestion(catId);
+  showQuestion(q, land.wedge);
+}
+
+function chooseCategory(defaultCat){
+  // simple prompt-like selection UI using native prompt (fast + robust)
+  const cats = activeCategories().map(cid=>catById(cid));
+  const menu = cats.map((c,i)=> `${i+1}) ${c.name}`).join("\n");
+  const ans = prompt("Elige categoría:\n" + menu + "\n\nEscribe número (1-" + cats.length + "):", "1");
+  const idx = Math.max(1, Math.min(cats.length, parseInt(ans||"1",10))) - 1;
+  return cats[idx].id || defaultCat;
+}
+
+function pickQuestion(catId){
+  // cycle through bank to avoid repeats; pick next that matches cat
+  const bank = state.qBank;
+  for(let i=0;i<bank.length;i++){
+    const idx = (state.qIndex + i) % bank.length;
+    if(bank[idx].cat === catId){
+      state.qIndex = (idx + 1) % bank.length;
+      saveState();
+      return bank[idx];
+    }
+  }
+  // fallback: any
+  const q = bank[state.qIndex % bank.length];
+  state.qIndex = (state.qIndex + 1) % bank.length;
+  saveState();
+  return q;
+}
+
+let currentQuestion = null;
+let currentIsWedge = false;
+let answered = false;
+
+function showQuestion(q, isWedge){
+  currentQuestion = q;
+  currentIsWedge = isWedge;
+  answered = false;
+
+  const back = document.getElementById("qBack");
+  back.classList.add("show");
+
+  const cat = catById(q.cat);
+  document.getElementById("catName").textContent = cat?.name || "—";
+  document.getElementById("catSw").style.background = cat?.color || "rgba(255,255,255,.5)";
+  document.getElementById("qPlayer").textContent = state.players[state.turn].name;
+
+  document.getElementById("qTitle").textContent = q.title + (isWedge ? "  ★ Quesito" : "");
+  document.getElementById("qText").textContent = q.text;
+
+  document.getElementById("feedback").textContent = "Responde para ver explicación.";
+  document.getElementById("btnContinue").disabled = true;
+
+  const invoiceBox = document.getElementById("invoiceBox");
+  invoiceBox.style.display = "none";
+  invoiceBox.innerHTML = "";
+
+  const seatBox = document.getElementById("seatBox");
+  seatBox.style.display = "none";
+  seatBox.innerHTML = "";
+
+  // options
+  const optGrid = document.getElementById("optGrid");
+  optGrid.innerHTML = "";
+  q.options.forEach((opt, idx)=>{
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = opt;
+    b.onclick = ()=> answer(idx);
+    optGrid.appendChild(b);
+  });
+
+  // show invoice sometimes
+  if(q.showInvoice && q.seat?.invoice){
+    const total = q.seat.lines.filter(l=>l.side==="DEBE").reduce((s,l)=>s+l.amount,0);
+    invoiceBox.style.display = "block";
+    invoiceBox.innerHTML = invoiceHTML(q.seat.invoice, total);
+  }
+}
+
+function answer(chosenIndex){
+  if(answered) return;
+  answered = true;
+
+  const q = currentQuestion;
+  const optGrid = document.getElementById("optGrid");
+  const buttons = [...optGrid.querySelectorAll("button")];
+
+  buttons.forEach((b, idx)=>{
+    b.disabled = true;
+    if(idx === q.correctIndex) b.classList.add("good");
+    if(idx === chosenIndex && idx !== q.correctIndex) b.classList.add("bad");
+  });
+
+  const ok = chosenIndex === q.correctIndex;
+  if(ok){
+    document.getElementById("feedback").textContent =
+      "✅ Correcto. " + q.explanation + (currentIsWedge ? "\n\n★ Has ganado el quesito si no lo tenías." : "");
+    // wedge awarding
+    if(currentIsWedge){
+      const cid = q.cat;
+      if(activeCategories().includes(cid)){
+        const have = state.wedges[state.turn] || [];
+        if(!have.includes(cid)){
+          have.push(cid);
+          state.wedges[state.turn] = have;
+          confetti();
+          toast("Quesito conseguido ★");
+        } else {
+          toast("Ya tenías ese quesito.");
+        }
+      }
+    } else {
+      toast("Correcto ✅");
+    }
+  } else {
+    document.getElementById("feedback").textContent =
+      "❌ Incorrecto.\nCorrecta: " + q.options[q.correctIndex] + "\n\n" + q.explanation;
+    toast("Fallaste ❌");
+  }
+
+  // check win
+  if((state.wedges[state.turn]?.length || 0) >= wedgesNeeded()){
+    confetti();
+    setTimeout(()=>{
+      alert("🏆 ¡GANA " + state.players[state.turn].name + "!\nHa completado todos los quesitos.");
+    }, 200);
+  }
+
+  document.getElementById("btnContinue").disabled = false;
+  saveState();
+  renderPlayers();
+}
+
+function closeQuestion(){
+  document.getElementById("qBack").classList.remove("show");
+}
+
+function continueAfterQuestion(){
+  closeQuestion();
+  // if incorrect, pass turn; if correct, keep turn? (Trivial clásico: depende de reglas; aquí: si acierta, sigue tirando en próxima acción)
+  // Para FP, mantenemos dinámico: si acierta → mantiene turno; si falla → pasa turno.
+  const q = currentQuestion;
+  // determine if last answer was correct by reading feedback first char (hacky but ok)
+  const fb = document.getElementById("feedback").textContent.trim();
+  const ok = fb.startsWith("✅");
+  if(!ok) nextTurn();
+  else {
+    // same turn
+    state.lastRoll = null;
+    document.getElementById("dice").textContent = "—";
+    saveState();
+    renderAll();
+  }
+}
+
+function showSeatT(){
+  const q = currentQuestion;
+  const seatBox = document.getElementById("seatBox");
+  if(seatBox.style.display==="none"){
+    if(!q.seat){
+      seatBox.style.display="block";
+      seatBox.innerHTML = `<div style="color:var(--muted)">Esta pregunta no tiene asiento asociado (es de Balance).</div>`;
+      return;
+    }
+    seatBox.style.display="block";
+    seatBox.innerHTML = seatToTHTML(q.seat);
+  } else {
+    seatBox.style.display="none";
+  }
+}
+
+/* =========================================================
+   10) SETUP UI
+========================================================= */
+const setupBack = document.getElementById("setupBack");
+const nameFields = document.getElementById("nameFields");
+
+function openSetup(){
+  setupBack.classList.add("show");
+  buildNameFields(parseInt(document.getElementById("numPlayers").value,10));
+  // preview invoice
+  const previewSeat = pick(PDF_SEATS);
+  const total = previewSeat.lines.filter(l=>l.side==="DEBE").reduce((s,l)=>s+l.amount,0);
+  document.getElementById("setupPreviewInvoice").innerHTML =
+    invoiceHTML(previewSeat.invoice, total);
+}
+function closeSetup(){ setupBack.classList.remove("show"); }
+
+function buildNameFields(n){
+  nameFields.innerHTML = "";
+  const colors = [
+    "linear-gradient(180deg, #2D7CFF, #1E4DFF)",
+    "linear-gradient(180deg, #FF3B3B, #FF1F6A)",
+    "linear-gradient(180deg, #29D66B, #12B95A)",
+    "linear-gradient(180deg, #FFD23D, #FFB800)",
+    "linear-gradient(180deg, #FF4FD8, #C14DFF)",
+    "linear-gradient(180deg, #8B5CFF, #5E6BFF)",
+  ];
+  for(let i=0;i<n;i++){
+    const div = document.createElement("div");
+    div.className = "field";
+    div.innerHTML = `
+      <label>Jugador ${i+1}</label>
+      <input id="pname_${i}" placeholder="Ej: Equipo ${i+1}" value="Equipo ${i+1}">
+    `;
+    nameFields.appendChild(div);
+  }
+}
+
+document.getElementById("numPlayers").addEventListener("change",(e)=>{
+  buildNameFields(parseInt(e.target.value,10));
+});
+
+/* =========================================================
+   11) EVENTS
+========================================================= */
+document.getElementById("btnRoll").addEventListener("click", rollDice);
+document.getElementById("btnSkip").addEventListener("click", ()=>{
+  if(!state.started) return toast("Primero crea una partida.");
+  nextTurn();
+  toast("Turno pasado ⏭️");
+});
+
+document.getElementById("btnNew").addEventListener("click", openSetup);
+document.getElementById("setupClose").addEventListener("click", closeSetup);
+
+document.getElementById("setupStart").addEventListener("click", ()=>{
+  const n = parseInt(document.getElementById("numPlayers").value,10);
+  const mode = document.getElementById("seedMode").value;
+  const difficulty = document.getElementById("difficulty").value;
+  const includeBalance = document.getElementById("includeBalance").value === "si";
+
+  const players = [];
+  const palette = ["#2D7CFF","#FF3B3B","#29D66B","#FFD23D","#FF4FD8","#8B5CFF"];
+  for(let i=0;i<n;i++){
+    const name = (document.getElementById("pname_"+i).value || `Equipo ${i+1}`).trim();
+    players.push({ name, color: palette[i%palette.length] });
+  }
+  closeSetup();
+  startGame({players, mode, difficulty, includeBalance});
+});
+
+document.getElementById("btnSave").addEventListener("click", saveState);
+document.getElementById("btnReset").addEventListener("click", ()=>{
+  if(confirm("¿Seguro que quieres reiniciar TODO (incluye partida guardada)?")) hardReset();
+});
+
+document.getElementById("difficulty").addEventListener("change",(e)=>{
+  state.difficulty = e.target.value;
+  // regenerar banco (manteniendo partida)
+  if(state.started){
+    state.qBank = makeQuestions({mode: state.mode, difficulty: state.difficulty, includeBalance: state.includeBalance});
+    state.qIndex = 0;
+    saveState();
+    toast("Dificultad actualizada ⚙️");
+  }
+});
+
+document.getElementById("includeBalance").addEventListener("change",(e)=>{
+  state.includeBalance = (e.target.value==="si");
+  if(state.started){
+    state.qBank = makeQuestions({mode: state.mode, difficulty: state.difficulty, includeBalance: state.includeBalance});
+    state.qIndex = 0;
+    // limpiar quesitos de balance si lo desactivas
+    if(!state.includeBalance){
+      state.wedges = state.wedges.map(ws=> ws.filter(cid=>cid!=="balance"));
+    }
+    saveState();
+    renderAll();
+    toast("Balance actualizado ⚙️");
+  } else {
+    renderAll();
+  }
+});
+
+document.getElementById("qClose").addEventListener("click", closeQuestion);
+document.getElementById("btnContinue").addEventListener("click", continueAfterQuestion);
+document.getElementById("btnShowSeat").addEventListener("click", showSeatT);
+
+document.getElementById("btnRules").addEventListener("click", ()=>{
+  document.getElementById("rulesBack").classList.add("show");
+});
+document.getElementById("rulesClose").addEventListener("click", ()=>{
+  document.getElementById("rulesBack").classList.remove("show");
+});
+
+/* =========================================================
+   12) INIT
+========================================================= */
+renderAll();
+
+// if there is saved game, show it
+if(state.started){
+  toast("Partida cargada ✅");
+} else {
+  // open setup the first time for convenience
+  setTimeout(openSetup, 250);
+}
+</script>
+</body>
+</html>
